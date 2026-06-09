@@ -1,0 +1,13 @@
+{
+  "name": "trabalho-estrutura-dados",
+  "version": "1.0.0",
+  "description": "Trabalho 2 de Estruturas de Dados Avançadas (Árvore B e Compressão)",
+  "main": "arvoreB.js",
+  "scripts": {
+    "start": "node arvoreB.js",
+    "compress": "node compressao.js",
+    "test": "node testes.js"
+  },
+  "author": "Yasmin (Coloque o nome da sua equipe no README)",
+  "license": "ISC"
+}

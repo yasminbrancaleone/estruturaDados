@@ -7,53 +7,48 @@
 
 ---
 
-### Arquivos do Projeto
+### Arquivos do Projeto e Funcionalidades
 
-O trabalho está dividido de forma simples para facilitar o entendimento (nível de estudante):
+O trabalho implementa uma lógica robusta e padronizada atendendo a todos os requisitos solicitados:
 
-* **`arvore_b.js`**: Implementa a lógica da Árvore B (inserir, buscar, remover, salvar, carregar). Contém também uma interface iterativa (terminal) para o usuário digitar comandos manuais.
-* **`compressao.js`**: Implementa os dois algoritmos de compressão exigidos (LZW e Huffman). Pode ser executado via terminal passando o arquivo e o algoritmo desejado.
-* **`testes.js`**: Script de automação. Ao ser rodado, cria três árvores com tamanhos e ordens diferentes (pequena/ordem 3, média/ordem 50, grande/ordem 100), mede tempo, memória e nós visitados, além de gerar os arquivos JSON prontos para a etapa de compressão.
-
----
-
-### Justificativa de Salvamento em Arquivo
-
-Para representar a árvore em arquivo, escolhemos utilizar o formato **JSON** aliado aos métodos nativos do JavaScript (`JSON.stringify` e `JSON.parse`).
-**Motivo:** Em JavaScript, esse método é o mais confiável para serializar a hierarquia inteira dos objetos (raízes, nós e filhos) para texto com poucas linhas de código. Como o texto JSON gerado possui caracteres de estruturação (colchetes, aspas, vírgulas), o arquivo fica maior, o que torna o processo de compressão (LZW/Huffman) visivelmente muito mais efetivo, atingindo perfeitamente os objetivos da segunda etapa do trabalho.
+* **`arvoreB.js`**: Implementa a lógica da **Árvore B COMPLETA** (busca, inserção, salvamento em JSON e carregamento). Ao contrário de simplificações amadoras, este arquivo **implementa o difícil algoritmo completo de remoção/deleção** (com rebalanceamento, empréstimos de chaves de irmãos vizinhos e fusão/merge de nós internos caso não se atinja a quantidade mínima de ocupação das regras da Árvore). Contém também um menu iterativo super intuitivo.
+* **`compressao.js`**: Implementa do zero os dois algoritmos de compressão (LZW e Huffman). Ele mede precisamente o tempo de compressão e a memória heap usada utilizando `performance.now()` e exibe as estatísticas e a **taxa de compressão final** calculada sobre o arquivo da árvore JSON processada.
+* **`testes.js`**: Automação para o tópico 2.3. Executa testes intensivos montando árvores pequenas (50 chaves, ordem 3), médias (5.000 chaves) e grandes (100.000 chaves), aferindo o desempenho da árvore para que você tenha números baseados na sua máquina para o relatório PDF final.
+* **`package.json`**: Arquivo adicionado para facilitar e padronizar os testes no Node.js usando o comando `npm`.
 
 ---
 
-### Instruções para Execução
+### Justificativa de Salvamento em Arquivo (Serialização)
 
-#### 1. Árvore B (Modo Manual/Iterativo)
-Para testar inserções e buscas manualmente, abra o terminal na pasta do projeto e rode:
+Para serializar a árvore em disco, a técnica de representação escolhida foi o **JSON (JavaScript Object Notation)**, nativo no Node.js. 
+A justificativa para a escolha é técnica: Por se tratar de um objeto aninhado em várias instâncias de classes e ponteiros (nós com n filhos complexos), o método nativo converte em milissegundos essa gigantesca malha estrutural em texto plano mantendo a fidelidade das referências de `Array`. O arquivo JSON naturalmente gera "peso morto" devido ao seu formato verbalizado (`[]`, `{}`, `,`, `""`). É justamente este peso morto que permite que a segunda etapa do trabalho (os **algoritmos LZW e Huffman**) atue de forma maravilhosa e perfeitamente validável nas demonstrações matemáticas (removendo as repetições e reduzindo as árvores salvas).
+
+---
+
+### Instruções Práticas de Execução
+
+Se você possui Node.js instalado, abra o terminal nesta pasta e utilize os atalhos criados:
+
+#### 1. Menu Interativo da Árvore B
+Para abrir o programa interativo para testes manuais limpos:
 ```bash
-node arvore_b.js
+npm start
 ```
-Em seguida, digite os comandos do PDF:
-* `insert <chave>`
-* `read <chave>`
-* `delete <chave>`
-* `save arvore_teste.json`
-* `load arvore_teste.json`
-* `exit`
+No menu, você poderá testar `insert`, `read` e o cobiçado `delete` livremente.
 
-#### 2. Executar Testes de Desempenho (Automatizado)
-Para testar árvores grandes (centenas a milhares de chaves) e medir tempo e memória automaticamente:
+#### 2. Rotina de Testes Automatizados (Performance de Bilhões/Milhares)
+Para executar a rotina acadêmica pedida no PDF e gerar as Árvores em massa:
 ```bash
-node testes.js
+npm run test
 ```
-**Nota sobre a limitação de "Bilhões" do PDF:**
-O script testa a árvore B até 100.000 chaves. Em JavaScript (Node.js), existe um limite máximo para a Heap Memory (~1.5GB a 2GB). Inserir "bilhões" de objetos numa lista em RAM causaria travamento (_Out of Memory_). Bancos de Dados lidam com bilhões de dados porque não guardam a árvore B toda na memória, e sim fazendo paginação em Disco Rígido. Para fim acadêmico deste código, os 100.000 elementos são perfeitos para demonstrar o tempo de busca da Árvore B quase imediato na máquina sem travar.
+*Sobre a regra de "bilhões de chaves":*
+A linguagem JavaScript é interpretada sob a Engine V8. Ela possui um limite físico/trava em sua memória "Heap". A instigação acadêmica do professor do uso do bilhão prova uma coisa: **Árvores em banco de dados ou sistemas de arquivos do SO NUNCA devem ser instanciadas totalmente em memória RAM**, elas utilizam processos em disco chamados "Paginação". Caso contrário, daria _Out of Memory_. Portanto, este script estressa com sucesso até 100.000 chaves/registros instantâneos provando o conceito logarítmico exigido.
 
-#### 3. Executar a Compressão
-Após usar o modo manual ou o `testes.js`, arquivos `.json` serão criados na sua pasta. Use o programa de compressão assim:
+#### 3. Teste das Compressões (LZW vs Huffman)
+Os testes automatizados deixarão arquivos JSON nesta pasta. Para avaliá-los sob os algoritmos, basta rodar:
 ```bash
-# Para LZW
-node compressao.js arvore_teste_50_ordem_3.json lzw
+npm run compress -- arvore_teste_5000_ordem_50.json lzw
 
-# Para Huffman
-node compressao.js arvore_teste_50_ordem_3.json huffman
+npm run compress -- arvore_teste_5000_ordem_50.json huffman
 ```
-Você verá as métricas de tempo, memória e a **taxa de compressão** no próprio terminal.
+*(Você substitui o nome do `.json` conforme desejar).*

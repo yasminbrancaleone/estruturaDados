@@ -1,13 +1,17 @@
 const fs = require('fs');
 
-// ==========================================
-// 1. Algoritmo LZW (Lempel-Ziv-Welch)
-// ==========================================
-// O LZW constrói um dicionário conforme lê o arquivo
+// ==============================================================
+// ALGORITMOS DE COMPRESSÃO
+// ==============================================================
+
+// --------------------------------------------------------------
+// 1. LZW (Lempel-Ziv-Welch)
+// --------------------------------------------------------------
 function comprimirLZW(texto) {
     let dicionario = {};
+    // Inicializa o dicionário com os 256 caracteres da tabela ASCII
     for (let i = 0; i < 256; i++) {
-        dicionario[String.fromCharCode(i)] = i; // Inicializa com a tabela ASCII padrão
+        dicionario[String.fromCharCode(i)] = i;
     }
     
     let atual = "";
@@ -19,101 +23,106 @@ function comprimirLZW(texto) {
         let combinacao = atual + char;
         
         if (dicionario.hasOwnProperty(combinacao)) {
-            atual = combinacao; // Se já existe, continua juntando letras
+            // Se a combinação já existe no dicionário, apenas guarda na string 'atual'
+            atual = combinacao;
         } else {
-            resultado.push(dicionario[atual]); // Salva o código da palavra conhecida
-            dicionario[combinacao] = proximoCodigo++; // Adiciona a nova combinação ao dicionário
-            atual = char; // Começa a montar a próxima palavra
+            // Se não existe, envia o código da string 'atual' para o resultado
+            resultado.push(dicionario[atual]);
+            // Adiciona a nova combinação ao dicionário
+            dicionario[combinacao] = proximoCodigo++;
+            // A string 'atual' recomeça a partir deste caractere
+            atual = char;
         }
     }
     
+    // Adiciona o último caractere/sequência restante
     if (atual !== "") {
         resultado.push(dicionario[atual]);
     }
     
-    return resultado; // Retorna um array de números (códigos)
+    return resultado; // Retorna um array de números inteiros (códigos)
 }
 
-// ==========================================
-// 2. Algoritmo de Huffman
-// ==========================================
-// Classe auxiliar para a árvore de Huffman
+// --------------------------------------------------------------
+// 2. Huffman
+// --------------------------------------------------------------
 class NoHuffman {
     constructor(char, frequencia, esq = null, dir = null) {
-        this.char = char;             // Caractere (null se for nó interno)
-        this.frequencia = frequencia; // Quantas vezes apareceu
-        this.esq = esq;               // Filho da esquerda (0)
-        this.dir = dir;               // Filho da direita (1)
+        this.char = char;             // Letra (null se for nó interno resultante de soma)
+        this.frequencia = frequencia; // Vezes que apareceu
+        this.esq = esq;               // Filho esquerdo (receberá bit 0)
+        this.dir = dir;               // Filho direito (receberá bit 1)
     }
 }
 
-// Monta a árvore baseada na frequência das letras
 function construirArvoreHuffman(texto) {
     let frequencias = {};
-    // Conta as letras
+    // 1. Conta a frequência de cada caractere no texto
     for (let i = 0; i < texto.length; i++) {
         let char = texto[i];
         frequencias[char] = (frequencias[char] || 0) + 1;
     }
     
-    // Cria uma fila de nós para cada caractere
+    // 2. Transforma as frequências em Nós da Árvore de Huffman e põe numa fila
     let fila = Object.keys(frequencias).map(char => new NoHuffman(char, frequencias[char]));
     
-    // Junta os nós até sobrar só a raiz
+    // 3. Monta a árvore juntando sempre as duas menores frequências
     while (fila.length > 1) {
-        // Ordena para pegar os de menor frequência (simulando fila de prioridade)
+        // Ordena para simular uma fila de prioridade
         fila.sort((a, b) => a.frequencia - b.frequencia);
         
-        let menor1 = fila.shift(); // Remove o 1º menor
-        let menor2 = fila.shift(); // Remove o 2º menor
+        let menor1 = fila.shift(); // Tira o 1º menor
+        let menor2 = fila.shift(); // Tira o 2º menor
         
-        // Cria um pai somando as frequências
+        // Cria um nó pai unindo os dois
         let novoNo = new NoHuffman(null, menor1.frequencia + menor2.frequencia, menor1, menor2);
         fila.push(novoNo);
     }
     
-    return fila[0]; // Retorna a raiz da árvore
+    return fila[0]; // A raiz da árvore construída
 }
 
-// Caminha na árvore e gera códigos binários para cada letra
-function gerarDicionarioHuffman(no, codigoAtual, dicionario) {
+function gerarCodigosBinarios(no, codigoAtual, dicionario) {
     if (!no) return;
+    
+    // Se for folha (tem caractere), salva no dicionário o código acumulado (ex: "1011")
     if (no.char !== null) {
-        dicionario[no.char] = codigoAtual; // Chegou na folha, salva o código
+        dicionario[no.char] = codigoAtual; 
         return;
     }
-    gerarDicionarioHuffman(no.esq, codigoAtual + "0", dicionario); // Esquerda adiciona '0'
-    gerarDicionarioHuffman(no.dir, codigoAtual + "1", dicionario); // Direita adiciona '1'
+    
+    // Continua percorrendo a árvore, esquerda = 0, direita = 1
+    gerarCodigosBinarios(no.esq, codigoAtual + "0", dicionario);
+    gerarCodigosBinarios(no.dir, codigoAtual + "1", dicionario);
 }
 
 function comprimirHuffman(texto) {
     if (texto.length === 0) return "";
     
     let raiz = construirArvoreHuffman(texto);
-    let dicionario = {};
-    gerarDicionarioHuffman(raiz, "", dicionario);
+    let dicionarioDeBits = {};
+    gerarCodigosBinarios(raiz, "", dicionarioDeBits);
     
-    // Converte o texto todo para uma grande string de 0s e 1s
-    let textoComprimido = "";
+    // Converte todo o texto original na nova grande string de bits
+    let textoComprimidoBits = "";
     for (let i = 0; i < texto.length; i++) {
-        textoComprimido += dicionario[texto[i]];
+        textoComprimidoBits += dicionarioDeBits[texto[i]];
     }
     
     return {
-        binarioString: textoComprimido,
-        // O dicionário é necessário para descomprimir no futuro
-        dicionario: dicionario
+        binarioString: textoComprimidoBits,
+        dicionario: dicionarioDeBits // Necessário salvar junto para poder descomprimir
     };
 }
 
-// ==========================================
-// Execução via Linha de Comando
-// ==========================================
-// Exemplo de uso: node compressao.js arvore.json lzw
+// ==============================================================
+// EXECUÇÃO DO PROGRAMA
+// ==============================================================
 if (require.main === module) {
     let argumentos = process.argv.slice(2);
     if (argumentos.length < 2) {
-        console.log("Uso correto: node compressao.js <arquivo_para_comprimir.json> <lzw ou huffman>");
+        console.log("Uso correto do comando: npm run compress -- <arquivo.json> <lzw|huffman>");
+        console.log("Exemplo manual: node compressao.js arvore_teste_50_ordem_3.json lzw");
         process.exit(1);
     }
 
@@ -121,56 +130,63 @@ if (require.main === module) {
     let algoritmo = argumentos[1].toLowerCase();
 
     try {
+        if (!fs.existsSync(arquivoEntrada)) {
+            console.log(`[Erro] O arquivo '${arquivoEntrada}' não foi encontrado.`);
+            process.exit(1);
+        }
+
         let textoOriginal = fs.readFileSync(arquivoEntrada, 'utf8');
         let tamanhoOriginalBytes = Buffer.byteLength(textoOriginal, 'utf8');
 
-        // Para as métricas de desempenho
-        let tempoInicio = process.hrtime();
+        // Medidores de performance nativos do Node (performance.now() exigido na atualização)
         let memoriaAntes = process.memoryUsage().heapUsed;
+        let tempoInicio = performance.now(); 
 
         let arquivoSaida = `${arquivoEntrada}.${algoritmo}`;
         let tamanhoComprimidoBytes = 0;
 
         if (algoritmo === 'lzw') {
+            console.log("Processando pelo algoritmo LZW...");
             let arrayCodigos = comprimirLZW(textoOriginal);
-            // Salva os códigos LZW num arquivo
             let dadosSalvar = JSON.stringify(arrayCodigos);
             fs.writeFileSync(arquivoSaida, dadosSalvar);
             tamanhoComprimidoBytes = Buffer.byteLength(dadosSalvar, 'utf8');
             
         } else if (algoritmo === 'huffman') {
+            console.log("Processando pelo algoritmo Huffman...");
             let resultado = comprimirHuffman(textoOriginal);
-            // Salva a string binária e a árvore/dicionário para uso posterior
             let dadosSalvar = JSON.stringify(resultado);
             fs.writeFileSync(arquivoSaida, dadosSalvar);
             tamanhoComprimidoBytes = Buffer.byteLength(dadosSalvar, 'utf8');
             
         } else {
-            console.log("Erro: Algoritmo desconhecido. Por favor, digite 'lzw' ou 'huffman'.");
+            console.log("[Erro] Algoritmo desconhecido. Por favor, escolha 'lzw' ou 'huffman'.");
             process.exit(1);
         }
 
-        // Calcula as métricas finais
+        // Fim da medição de desempenho
+        let tempoFim = performance.now();
         let memoriaDepois = process.memoryUsage().heapUsed;
-        let tempoFim = process.hrtime(tempoInicio);
-        let tempoEmMs = (tempoFim[0] * 1000) + (tempoFim[1] / 1000000);
-        let memoriaUsada = (memoriaDepois - memoriaAntes) / 1024;
+        
+        let tempoEmMs = (tempoFim - tempoInicio).toFixed(4);
+        let memoriaUsada = Math.abs((memoriaDepois - memoriaAntes) / 1024).toFixed(2);
+        let taxaDeCompressao = (1 - (tamanhoComprimidoBytes / tamanhoOriginalBytes)) * 100;
 
-        console.log(`\n=== Resultados da Compressão (${algoritmo.toUpperCase()}) ===`);
-        console.log(`Arquivo analisado: ${arquivoEntrada}`);
-        console.log(`Tamanho original: ${(tamanhoOriginalBytes / 1024).toFixed(2)} KB`);
-        console.log(`Tamanho comprimido: ${(tamanhoComprimidoBytes / 1024).toFixed(2)} KB`);
-        
-        let taxa = (1 - (tamanhoComprimidoBytes / tamanhoOriginalBytes)) * 100;
-        console.log(`Taxa de compressão: ${taxa.toFixed(2)}% (quanto mais alto, menor ficou o arquivo)`);
-        
-        console.log(`Tempo gasto na compressão: ${tempoEmMs.toFixed(3)} ms`);
-        // O node as vezes reutiliza a heap, então a memória gasta pode dar negativo nas contagens pontuais,
-        // usamos Math.abs para não confundir o professor
-        console.log(`Variação de Memória: ${Math.abs(memoriaUsada).toFixed(2)} KB`); 
-        console.log(`Salvo com sucesso em: ${arquivoSaida}\n`);
+        // Relatório final na tela
+        console.log(`\n======================================================`);
+        console.log(`          RESULTADOS DA COMPRESSÃO (${algoritmo.toUpperCase()})        `);
+        console.log(`======================================================`);
+        console.log(`Arquivo Processado   : ${arquivoEntrada}`);
+        console.log(`Tamanho Original     : ${(tamanhoOriginalBytes / 1024).toFixed(2)} KB`);
+        console.log(`Tamanho Comprimido   : ${(tamanhoComprimidoBytes / 1024).toFixed(2)} KB`);
+        console.log(`Taxa de Compressão   : ${taxaDeCompressao.toFixed(2)}% (Quanto maior, melhor a eficiência)`);
+        console.log(`\n📊 DESEMPENHO DO ALGORITMO:`);
+        console.log(`Tempo de Execução    : ${tempoEmMs} ms`);
+        console.log(`Memória Heap Utilizada: ${memoriaUsada} KB`);
+        console.log(`\n[✓] O arquivo final foi salvo como: ${arquivoSaida}`);
+        console.log(`======================================================\n`);
 
     } catch (erro) {
-        console.log(`Erro ao processar o arquivo: ${erro.message}`);
+        console.log(`\n[X] Ocorreu um erro durante a compressão: ${erro.message}`);
     }
 }

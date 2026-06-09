@@ -1,46 +1,45 @@
-const ArvoreB = require('./arvore_b');
+const ArvoreB = require('./arvoreB'); // Mudado de arvore_b para arvoreB conforme a atualização
 const fs = require('fs');
 
 console.log("=================================================");
 console.log("   Bateria de Testes Automatizados - Árvore B    ");
 console.log("=================================================");
 
-// Função que executa um cenário de teste completo na Árvore B
 function rodarTeste(qtdChaves, ordem) {
     console.log(`\n▶ Iniciando teste com Árvore de Ordem ${ordem} e ${qtdChaves} chaves...`);
     
     let arvore = new ArvoreB(ordem);
     
-    // Preparando as variáveis de medição de desempenho
-    let tempoInicio = process.hrtime();
+    // Preparando as variáveis de medição (Usando performance.now() para alta precisão)
     let memoriaAntes = process.memoryUsage().heapUsed;
+    let tempoInicio = performance.now();
     let totalNosVisitadosInsercao = 0;
 
     // ==========================================
     // Teste 1: Inserção de Elementos
     // ==========================================
     for (let i = 0; i < qtdChaves; i++) {
-        arvore.nosVisitados = 0; // Zera para cada operação
-        arvore.inserir(`chave_${i}`); // Insere chaves em formato de string
+        arvore.nosVisitados = 0; // Zera para a contagem pontual desta operação
+        arvore.inserir(`chave_${i}`); 
         totalNosVisitadosInsercao += arvore.nosVisitados;
     }
     
+    let tempoFimInsercao = performance.now();
     let memoriaDepoisInsercao = process.memoryUsage().heapUsed;
-    let tempoFimInsercao = process.hrtime(tempoInicio);
-    let tempoInsercaoMs = (tempoFimInsercao[0] * 1000) + (tempoFimInsercao[1] / 1000000);
+    let tempoInsercaoMs = (tempoFimInsercao - tempoInicio).toFixed(2);
 
     console.log(`[+] Inserção concluída!`);
-    console.log(`    Tempo gasto: ${tempoInsercaoMs.toFixed(2)} ms`);
-    console.log(`    Nós visitados (média por chave): ${(totalNosVisitadosInsercao / qtdChaves).toFixed(2)}`);
-    console.log(`    Memória alocada: ${(Math.abs(memoriaDepoisInsercao - memoriaAntes) / 1024 / 1024).toFixed(2)} MB`);
+    console.log(`    Tempo total gasto: ${tempoInsercaoMs} ms`);
+    console.log(`    Média de nós visitados por inserção: ${(totalNosVisitadosInsercao / qtdChaves).toFixed(2)}`);
+    console.log(`    Memória RAM alocada para os nós: ${(Math.abs(memoriaDepoisInsercao - memoriaAntes) / 1024 / 1024).toFixed(2)} MB`);
 
     // ==========================================
     // Teste 2: Busca de Elementos (Amostragem)
     // ==========================================
-    tempoInicio = process.hrtime();
+    tempoInicio = performance.now();
     let totalNosVisitadosBusca = 0;
     
-    // Vamos buscar 10% das chaves (ou no mínimo 1) para ter uma média de desempenho justa
+    // Busca 10% das chaves inseridas para ter uma amostragem justa do tempo médio
     let qtdBuscas = Math.max(1, Math.floor(qtdChaves * 0.1));
     for (let i = 0; i < qtdBuscas; i++) {
         arvore.nosVisitados = 0;
@@ -48,45 +47,45 @@ function rodarTeste(qtdChaves, ordem) {
         totalNosVisitadosBusca += arvore.nosVisitados;
     }
 
-    let tempoFimBusca = process.hrtime(tempoInicio);
-    let tempoBuscaMs = (tempoFimBusca[0] * 1000) + (tempoFimBusca[1] / 1000000);
+    let tempoFimBusca = performance.now();
+    let tempoBuscaMs = (tempoFimBusca - tempoInicio).toFixed(2);
     
-    console.log(`[+] Busca concluída! (Amostra de ${qtdBuscas} buscas)`);
-    console.log(`    Tempo gasto: ${tempoBuscaMs.toFixed(2)} ms`);
-    console.log(`    Nós visitados (média por busca): ${(totalNosVisitadosBusca / qtdBuscas).toFixed(2)}`);
+    console.log(`[+] Busca concluída! (Amostra de ${qtdBuscas} buscas aleatórias)`);
+    console.log(`    Tempo total gasto na busca: ${tempoBuscaMs} ms`);
+    console.log(`    Média de nós visitados para achar 1 chave: ${(totalNosVisitadosBusca / qtdBuscas).toFixed(2)}`);
 
     // ==========================================
-    // Teste 3: Salvamento do arquivo para testar Compressão
+    // Teste 3: Salvamento do arquivo para teste de Compressão
     // ==========================================
     let nomeArquivo = `arvore_teste_${qtdChaves}_ordem_${ordem}.json`;
-    arvore.salvar(nomeArquivo);
-    console.log(`[+] Arquivo da árvore salvo em: ${nomeArquivo}`);
+    arvore.salvar(nomeArquivo); // A própria classe lida com a mensagem de salvamento
 }
 
 // -----------------------------------------------------------
 // Execução dos cenários pedidos pelo professor no PDF
 // -----------------------------------------------------------
 
-// Teste 1: Pequena quantidade (Dezenas de chaves, ordem pequena)
+// Cenário 1: Pequena quantidade de dados, ordem baixa para forçar divisão
 rodarTeste(50, 3);
 
-// Teste 2: Média quantidade (Milhares de chaves, ordem média)
+// Cenário 2: Média quantidade, ordem equilibrada
 rodarTeste(5000, 50);
 
-// Teste 3: Grande quantidade (100.000 chaves, ordem alta)
-// NOTA IMPORTANTE PARA O PROFESSOR:
-// O PDF pede para testar "bilhões de chaves". Porém, as engines do JavaScript (como a V8 do Node.js)
-// têm um limite estrito de memória heap (geralmente em torno de 1.5GB - 2GB por padrão).
-// Alocar bilhões de objetos de classe iria "estourar" a memória (Out of Memory Error).
-// Em um sistema real (Banco de Dados / SO), os nós da árvore B são armazenados em disco (paginação),
-// e não completamente na memória RAM.
-// Portanto, limitamos este script a 100.000 chaves para simular uma árvore grande sem quebrar a
-// máquina na hora da apresentação do trabalho.
+// Cenário 3: Grande quantidade, ordem alta para simular página de disco maior
+// NOTA IMPORTANTE (Defesa do Trabalho):
+// O PDF pede para "testar bilhões de chaves". Testar bilhões de chaves estritamente em memória
+// utilizando linguagens interpretadas de nível alto (JavaScript/V8 Engine) gera o erro de "Heap Out of Memory"
+// pois a RAM do computador será inteiramente consumida pela alocação de classes antes do bilhão ser atingido.
+//
+// Sistemas reais resolvem a escala do bilhão deixando a Árvore B armazenada no disco rígido (paginação),
+// e não toda instanciada na RAM de uma vez só. Como o projeto foca em estrutura de dados acadêmica e didática em JS,
+// os 100.000 (cem mil) elementos aqui são mais que suficientes para demonstrar o tempo logarítmico O(log n)
+// maravilhoso que a árvore tem, completando as buscas quase instantaneamente e mantendo o notebook salvo de travamentos.
 rodarTeste(100000, 100);
 
 console.log("\n=================================================");
-console.log(" Testes finalizados! Agora, teste a compressão:  ");
+console.log(" TODOS OS TESTES AUTOMATIZADOS FORAM CONCLUÍDOS! ");
 console.log("=================================================");
-console.log("Digite no terminal:");
-console.log("node compressao.js arvore_teste_5000_ordem_50.json lzw");
-console.log("node compressao.js arvore_teste_5000_ordem_50.json huffman");
+console.log("Agora, para visualizar o relatório de compressão, use os comandos no seu terminal:");
+console.log("npm run compress -- arvore_teste_5000_ordem_50.json lzw");
+console.log("npm run compress -- arvore_teste_5000_ordem_50.json huffman\n");

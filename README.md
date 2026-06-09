@@ -2,8 +2,8 @@
 ## Árvore B e Algoritmos de Compressão
 
 ### Integrantes do Grupo
-* [NOME COMPLETO AQUI]
-* [NOME COMPLETO AQUI]
+* Gabriel de Paula Gaspar Pinto
+* Yasmin Cabrini Brancaleone 
 
 ---
 
